@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Grandeur Production Dashboard</title>
+  <!-- Chart.js & PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+  body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(to right, #0f172a, #1e293b);
+  color: #f1f5f9;
+  padding: 30px;
+  margin: 0;
+}
+h1 {
+  text-align: center;
+  background: linear-gradient(90deg, #60a5fa, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 30px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 25px;
+}
+.section {
+  background: rgba(255 255 255 / 0.07);
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+h2 {
+  margin-bottom: 15px;
+  background: linear-gradient(90deg, #60a5fa, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.filters {
+  margin-bottom: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.filters label {
+  font-weight: 600;
+  color: #cbd5e1;
+}
+.filters select, .filters input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+th, td {
+  padding: 10px;
+  border-top: 1px solid rgba(255 255 255 / 0.1);
+}
+th {
+  background-color: rgba(255 255 255 / 0.1);
+  font-weight: 600;
+  text-align: left;
+  color: #a5b4fc;
+}
+td {
+  color: #e0e7ff;
+}
+button {
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+button:hover {
+  background: linear-gradient(90deg, #2563eb, #4f46e5);
+}
+#topPerformer {
+  margin-top: 10px;
+  color: #a5b4fc;
+  font-weight: 600;
+  line-height: 1.4;
+}
+canvas {
+  margin-top: 20px;
+}
+
+/* ---- Roomy Top Performer Section Styles ---- */
+@media (min-width: 900px) {
+  #topPerformerSection {
+    grid-column: span 2;
+  }
+}
+#topPerformerSection {
+  min-height: 420px;
+}
+#topPerformersTable {
+  table-layout: fixed;
+  width: 100%;
+}
+#topPerformersTable td,
+#topPerformersTable th {
+  word-break: break-word;
+  white-space: normal;
+  text-align: left;
+  padding: 10px 8px;
+}
+#topPerformersTable th:last-child,
+#topPerformersTable td:last-child {
+  max-width: 300px;
+}
+
+  </style>
+</head>
+<body>
+
+<h1>📊 Grandeur Production Dashboard</h1>
+
+<div class="grid">
+  <div class="section" id="operatorPerformanceSection">
+    <h2>Operator Performance</h2>
+    <div class="filters">
+      <label for="operatorTimeFilter">Filter:</label>
+      <select id="operatorTimeFilter">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="yearly">Yearly</option>
+        <option value="range">Custom Range</option>
+      </select>
+      <label for="operatorStartDate">From:</label>
+      <input type="date" id="operatorStartDate" disabled />
+      <label for="operatorEndDate">To:</label>
+      <input type="date" id="operatorEndDate" disabled />
+      <button id="operatorApplyFilter">Apply</button>
+      <button id="operatorExportBtn">Export CSV</button>
+    </div>
+    <canvas id="operatorChart"></canvas>
+    <table id="operatorTable">
+      <thead>
+        <tr><th>Operator</th><th>Produced</th><th>Wasted</th><th>Performance %</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="machineEfficiencySection">
+    <h2>Machine Efficiency</h2>
+    <div class="filters">
+      <label for="machineTimeFilter">Filter:</label>
+      <select id="machineTimeFilter">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="yearly">Yearly</option>
+        <option value="range">Custom Range</option>
+      </select>
+      <label for="machineStartDate">From:</label>
+      <input type="date" id="machineStartDate" disabled />
+      <label for="machineEndDate">To:</label>
+      <input type="date" id="machineEndDate" disabled />
+      <button id="machineApplyFilter">Apply</button>
+      <button id="machineExportBtn">Export CSV</button>
+    </div>
+    <canvas id="machineChart"></canvas>
+    <table id="machineTable">
+      <thead>
+        <tr><th>Machine</th><th>Produced</th><th>Wasted</th><th>Efficiency %</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="ordersOverviewSection">
+    <h2>Orders Overview</h2>
+    <div class="filters">
+      <label for="ordersTimeFilter">Filter:</label>
+      <select id="ordersTimeFilter">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="yearly">Yearly</option>
+        <option value="range">Custom Range</option>
+      </select>
+      <label for="ordersStartDate">From:</label>
+      <input type="date" id="ordersStartDate" disabled />
+      <label for="ordersEndDate">To:</label>
+      <input type="date" id="ordersEndDate" disabled />
+      <button id="ordersApplyFilter">Apply</button>
+      <button id="ordersExportBtn">Export CSV</button>
+    </div>
+    <canvas id="ordersChart"></canvas>
+    <table id="ordersTable">
+      <thead>
+        <tr><th>Brand</th><th>Received</th><th>Completed</th><th>Completion %</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="topPerformerSection">
+    <h2>Top Performer</h2>
+    <div class="filters">
+      <label for="topTimeFilter">Filter:</label>
+      <select id="topTimeFilter">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="yearly">Yearly</option>
+        <option value="range">Custom Range</option>
+      </select>
+      <label for="topStartDate">From:</label>
+      <input type="date" id="topStartDate" disabled />
+      <label for="topEndDate">To:</label>
+      <input type="date" id="topEndDate" disabled />
+      <button id="topApplyFilter">Apply</button>
+      <button id="topExportBtn">Export CSV</button>
+    </div>
+    <div id="topPerformer"></div>
+    <table id="topPerformersTable">
+      <thead>
+        <tr><th>Rank</th><th>Operator</th><th>Produced</th><th>Wasted</th><th>Performance %</th><th>Reason</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function parseDate(str) { return new Date(str + 'T00:00:00'); }
+function dateToYMD(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+function isDateInRange(date, start, end) { return date >= start && date <= end; }
+function getDateRange(filter) {
+  const now = new Date();
+  const start = new Date(now);
+  let end = new Date(now);
+  switch(filter) {
+    case 'daily':
+      start.setHours(0,0,0,0); end.setHours(23,59,59,999); break;
+    case 'weekly': {
+      const day = now.getDay();
+      start.setDate(now.getDate() - day);
+      start.setHours(0,0,0,0);
+      end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999); break;
+    }
+    case 'monthly':
+      start.setDate(1); start.setHours(0,0,0,0);
+      end = new Date(now.getFullYear(), now.getMonth()+1, 0); end.setHours(23,59,59,999); break;
+    case 'yearly':
+      start.setMonth(0,1); start.setHours(0,0,0,0);
+      end.setMonth(11,31); end.setHours(23,59,59,999); break;
+    default: return null;
+  }
+  return { start, end };
+}
+function handleFilterChange(selectElem, startInput, endInput) {
+  if(selectElem.value === 'range') {
+    startInput.disabled = false;
+    endInput.disabled = false;
+  } else {
+    startInput.disabled = true;
+    endInput.disabled = true;
+    startInput.value = ''; endInput.value = '';
+  }
+}
+// ---- Demo Data ----
+const operatorsCSV = `operator,date,produced,wasted
+John,2025-08-25,15,2
+Jane,2025-08-25,22,1
+Mike,2025-08-24,10,5
+John,2025-08-24,10,1
+Jane,2025-08-23,12,2
+Mike,2025-08-22,9,0
+John,2025-07-01,30,3`;
+const machinesCSV = `machine,date,produced,wasted
+M1,2025-08-25,30,3
+M2,2025-08-25,40,2
+M3,2025-08-24,20,5
+M1,2025-08-23,25,2
+M2,2025-08-22,38,4`;
+const ordersCSV = `brand,date,status,quantity
+BrandA,2025-08-25,Received,50
+BrandA,2025-08-25,Completed,30
+BrandB,2025-08-25,Received,40
+BrandB,2025-08-25,Completed,35
+BrandA,2025-08-24,Received,60
+BrandB,2025-08-24,Completed,45`;
+// ---- Data Parse ----
+let operatorDataRaw = Papa.parse(operatorsCSV, {header:true, skipEmptyLines:true}).data;
+let machineDataRaw = Papa.parse(machinesCSV, {header:true, skipEmptyLines:true}).data;
+let ordersDataRaw = Papa.parse(ordersCSV, {header:true, skipEmptyLines:true}).data;
+operatorDataRaw.forEach(d => { d.produced = Number(d.produced); d.wasted = Number(d.wasted); });
+machineDataRaw.forEach(d => { d.produced = Number(d.produced); d.wasted = Number(d.wasted); });
+ordersDataRaw.forEach(d => { d.quantity = Number(d.quantity); });
+// ---- Aggregate ----
+function filterDataByDate(data, startDate, endDate, dateField = 'date') {
+  return data.filter(d => {
+    const dt = parseDate(d[dateField]);
+    return dt >= startDate && dt <= endDate;
+  });
+}
+function aggregateOperators(data) {
+  const agg = {}; data.forEach(d => {
+    if (!agg[d.operator]) agg[d.operator] = {produced:0, wasted:0};
+    agg[d.operator].produced += d.produced; agg[d.operator].wasted += d.wasted;
+  });
+  for(let op in agg) {
+    const {produced, wasted} = agg[op];
+    agg[op].performance = produced === 0 ? 0 : ((produced - wasted) / produced) * 100;
+  } return agg;
+}
+function aggregateMachines(data) {
+  const agg = {}; data.forEach(d => {
+    if (!agg[d.machine]) agg[d.machine] = {produced:0, wasted:0};
+    agg[d.machine].produced += d.produced; agg[d.machine].wasted += d.wasted;
+  });
+  for(let m in agg) {
+    const {produced, wasted} = agg[m];
+    agg[m].efficiency = produced === 0 ? 0 : ((produced - wasted) / produced) * 100;
+  } return agg;
+}
+function aggregateOrders(data) {
+  const agg = {};
+  data.forEach(d => {
+    if (!agg[d.brand]) agg[d.brand] = {received:0, completed:0};
+    if(d.status.toLowerCase() === 'received') agg[d.brand].received += d.quantity;
+    if(d.status.toLowerCase() === 'completed') agg[d.brand].completed += d.quantity;
+  });
+  for(let b in agg) {
+    const {received, completed} = agg[b];
+    agg[b].completion = received === 0 ? 0 : (completed / received) * 100;
+  } return agg;
+}
+// ---- Chart Functions ----
+let operatorChart, machineChart, ordersChart;
+function updateOperatorPerformance(filterType, startDate, endDate) {
+  let filteredData;
+  if(filterType === 'range' && startDate && endDate) {
+    filteredData = filterDataByDate(operatorDataRaw, startDate, endDate);
+  } else {
+    const range = getDateRange(filterType);
+    if(!range) filteredData = operatorDataRaw;
+    else filteredData = filterDataByDate(operatorDataRaw, range.start, range.end);
+  }
+  const agg = aggregateOperators(filteredData);
+  const labels = Object.keys(agg);
+  const producedData = labels.map(op => agg[op].produced);
+  const wastedData = labels.map(op => agg[op].wasted);
+  const performanceData = labels.map(op => agg[op].performance.toFixed(2));
+  if(operatorChart) operatorChart.destroy();
+  operatorChart = new Chart(document.getElementById('operatorChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Produced', data: producedData, backgroundColor: 'rgba(96, 165, 250, 0.7)' },
+        { label: 'Wasted', data: wastedData, backgroundColor: 'rgba(248, 113, 113, 0.7)' },
+        { label: 'Performance %', data: performanceData, type: 'line', borderColor: 'rgba(132, 204, 22, 0.9)', borderWidth: 3, fill: false, yAxisID: 'y1', tension: 0.3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: {mode: 'index', intersect: false},
+      scales: {
+        y: {
+          beginAtZero: true,
+          position: 'left',
+          title: {display:true, text:'Count'}
+        },
+        y1: {
+          beginAtZero: true,
+          position: 'right',
+          max: 100,
+          title: {display:true, text:'Performance %'},
+          grid: {drawOnChartArea: false}
+        }
+      }
+    }
+  });
+  // Table update
+  const tbody = document.querySelector('#operatorTable tbody'); tbody.innerHTML = '';
+  labels.forEach(op => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${op}</td><td>${agg[op].produced}</td><td>${agg[op].wasted}</td><td>${agg[op].performance.toFixed(2)}%</td>`;
+    tbody.appendChild(row);
+  });
+  return agg;
+}
+function updateMachineEfficiency(filterType, startDate, endDate) {
+  let filteredData;
+  if(filterType === 'range' && startDate && endDate) {
+    filteredData = filterDataByDate(machineDataRaw, startDate, endDate);
+  } else {
+    const range = getDateRange(filterType);
+    if(!range) filteredData = machineDataRaw;
+    else filteredData = filterDataByDate(machineDataRaw, range.start, range.end);
+  }
+  const agg = aggregateMachines(filteredData);
+  const labels = Object.keys(agg);
+  const producedData = labels.map(m => agg[m].produced);
+  const wastedData = labels.map(m => agg[m].wasted);
+  const efficiencyData = labels.map(m => agg[m].efficiency.toFixed(2));
+  if(machineChart) machineChart.destroy();
+  machineChart = new Chart(document.getElementById('machineChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Produced', data: producedData, backgroundColor: 'rgba(96, 165, 250, 0.7)' },
+        { label: 'Wasted', data: wastedData, backgroundColor: 'rgba(248, 113, 113, 0.7)' },
+        { label: 'Efficiency %', data: efficiencyData, type: 'line', borderColor: 'rgba(132, 204, 22, 0.9)', borderWidth: 3, fill: false, yAxisID: 'y1', tension: 0.3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: {mode: 'index', intersect: false},
+      scales: {
+        y: {
+          beginAtZero: true,
+          position: 'left',
+          title: {display:true, text:'Count'}
+        },
+        y1: {
+          beginAtZero: true,
+          position: 'right',
+          max: 100,
+          title: {display:true, text:'Efficiency %'},
+          grid: {drawOnChartArea: false}
+        }
+      }
+    }
+  });
+  const tbody = document.querySelector('#machineTable tbody'); tbody.innerHTML = '';
+  labels.forEach(m => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${m}</td><td>${agg[m].produced}</td><td>${agg[m].wasted}</td><td>${agg[m].efficiency.toFixed(2)}%</td>`;
+    tbody.appendChild(row);
+  });
+  return agg;
+}
+function updateOrdersOverview(filterType, startDate, endDate) {
+  let filteredData;
+  if(filterType === 'range' && startDate && endDate) {
+    filteredData = filterDataByDate(ordersDataRaw, startDate, endDate);
+  } else {
+    const range = getDateRange(filterType);
+    if(!range) filteredData = ordersDataRaw;
+    else filteredData = filterDataByDate(ordersDataRaw, range.start, range.end);
+  }
+  const agg = aggregateOrders(filteredData);
+  const labels = Object.keys(agg);
+  const receivedData = labels.map(b => agg[b].received);
+  const completedData = labels.map(b => agg[b].completed);
+  const completionData = labels.map(b => agg[b].completion.toFixed(2));
+  if(ordersChart) ordersChart.destroy();
+  ordersChart = new Chart(document.getElementById('ordersChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Received', data: receivedData, backgroundColor: 'rgba(96, 165, 250, 0.7)' },
+        { label: 'Completed', data: completedData, backgroundColor: 'rgba(34, 197, 94, 0.7)' },
+        { label: 'Completion %', data: completionData, type: 'line', borderColor: 'rgba(132, 204, 22, 0.9)', borderWidth: 3, fill: false, yAxisID: 'y1', tension: 0.3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: {mode: 'index', intersect: false},
+      scales: {
+        y: {
+          beginAtZero: true,
+          position: 'left',
+          title: {display:true, text:'Quantity'}
+        },
+        y1: {
+          beginAtZero: true,
+          position: 'right',
+          max: 100,
+          title: {display:true, text:'Completion %'},
+          grid: {drawOnChartArea: false}
+        }
+      }
+    }
+  });
+  const tbody = document.querySelector('#ordersTable tbody'); tbody.innerHTML = '';
+  labels.forEach(b => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${b}</td><td>${agg[b].received}</td><td>${agg[b].completed}</td><td>${agg[b].completion.toFixed(2)}%</td>`;
+    tbody.appendChild(row);
+  });
+  return agg;
+}
+// Top Performer
+function updateTopPerformer(filterType, startDate, endDate) {
+  let filteredData;
+  if(filterType === 'range' && startDate && endDate) {
+    filteredData = filterDataByDate(operatorDataRaw, startDate, endDate);
+  } else {
+    const range = getDateRange(filterType);
+    if(!range) filteredData = operatorDataRaw;
+    else filteredData = filterDataByDate(operatorDataRaw, range.start, range.end);
+  }
+  const agg = aggregateOperators(filteredData);
+  const sorted = Object.entries(agg).sort((a,b) => b[1].performance - a[1].performance);
+  if(sorted.length === 0) {
+    document.getElementById('topPerformer').innerText = "No data for selected filter.";
+    document.querySelector('#topPerformersTable tbody').innerHTML = '';
+    return;
+  }
+  const top = sorted[0];
+  const [topName, topStats] = top;
+  const reason = generateTopReason(topStats);
+  const topDiv = document.getElementById('topPerformer');
+  topDiv.innerHTML = `
+    🏆 <strong>${topName}</strong><br />
+    Produced: ${topStats.produced}<br />
+    Wasted: ${topStats.wasted}<br />
+    Performance: ${topStats.performance.toFixed(2)}%<br />
+    Reason: ${reason}
+  `;
+  const tbody = document.querySelector('#topPerformersTable tbody');
+  tbody.innerHTML = '';
+  for(let i=1; i<Math.min(5, sorted.length); i++) {
+    const [name, stats] = sorted[i];
+    const reason = generateTopReason(stats);
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${i+1}</td><td>${name}</td><td>${stats.produced}</td><td>${stats.wasted}</td><td>${stats.performance.toFixed(2)}%</td><td>${reason}</td>`;
+    tbody.appendChild(row);
+  }
+  return sorted;
+}
+function generateTopReason(stats) {
+  if(stats.performance > 90) return "Excellent efficiency with low waste.";
+  if(stats.performance > 75) return "Good performance but some waste.";
+  if(stats.performance > 50) return "Average performance, needs improvement.";
+  return "Low performance, high waste.";
+}
+function exportCSV(headers, dataRows, filename) {
+  const csvContent = [
+    headers.join(','),
+    ...dataRows.map(row => row.join(','))
+  ].join('\n');
+  const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+// --- Event Listeners ---
+document.addEventListener('DOMContentLoaded', function() {
+  // Filters
+  const opTimeFilter = document.getElementById('operatorTimeFilter');
+  const opStartDate = document.getElementById('operatorStartDate');
+  const opEndDate = document.getElementById('operatorEndDate');
+  const opApplyBtn = document.getElementById('operatorApplyFilter');
+  const opExportBtn = document.getElementById('operatorExportBtn');
+  opTimeFilter.addEventListener('change', () => handleFilterChange(opTimeFilter, opStartDate, opEndDate));
+  opApplyBtn.addEventListener('click', () => {
+    const filterType = opTimeFilter.value;
+    let start = opStartDate.value ? parseDate(opStartDate.value) : null;
+    let end = opEndDate.value ? parseDate(opEndDate.value) : null;
+    updateOperatorPerformance(filterType, start, end);
+  });
+  opExportBtn.addEventListener('click', () => {
+    const tbody = document.querySelector('#operatorTable tbody');
+    const rows = [...tbody.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.innerText));
+    exportCSV(['Operator','Produced','Wasted','Performance %'], rows, 'operator_performance.csv');
+  });
+  // Machine
+  const mTimeFilter = document.getElementById('machineTimeFilter');
+  const mStartDate = document.getElementById('machineStartDate');
+  const mEndDate = document.getElementById('machineEndDate');
+  const mApplyBtn = document.getElementById('machineApplyFilter');
+  const mExportBtn = document.getElementById('machineExportBtn');
+  mTimeFilter.addEventListener('change', () => handleFilterChange(mTimeFilter, mStartDate, mEndDate));
+  mApplyBtn.addEventListener('click', () => {
+    const filterType = mTimeFilter.value;
+    let start = mStartDate.value ? parseDate(mStartDate.value) : null;
+    let end = mEndDate.value ? parseDate(mEndDate.value) : null;
+    updateMachineEfficiency(filterType, start, end);
+  });
+  mExportBtn.addEventListener('click', () => {
+    const tbody = document.querySelector('#machineTable tbody');
+    const rows = [...tbody.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.innerText));
+    exportCSV(['Machine','Produced','Wasted','Efficiency %'], rows, 'machine_efficiency.csv');
+  });
+  // Orders
+  const oTimeFilter = document.getElementById('ordersTimeFilter');
+  const oStartDate = document.getElementById('ordersStartDate');
+  const oEndDate = document.getElementById('ordersEndDate');
+  const oApplyBtn = document.getElementById('ordersApplyFilter');
+  const oExportBtn = document.getElementById('ordersExportBtn');
+  oTimeFilter.addEventListener('change', () => handleFilterChange(oTimeFilter, oStartDate, oEndDate));
+  oApplyBtn.addEventListener('click', () => {
+    const filterType = oTimeFilter.value;
+    let start = oStartDate.value ? parseDate(oStartDate.value) : null;
+    let end = oEndDate.value ? parseDate(oEndDate.value) : null;
+    updateOrdersOverview(filterType, start, end);
+  });
+  oExportBtn.addEventListener('click', () => {
+    const tbody = document.querySelector('#ordersTable tbody');
+    const rows = [...tbody.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.innerText));
+    exportCSV(['Brand','Received','Completed','Completion %'], rows, 'orders_overview.csv');
+  });
+  // Top Performer
+  const tTimeFilter = document.getElementById('topTimeFilter');
+  const tStartDate = document.getElementById('topStartDate');
+  const tEndDate = document.getElementById('topEndDate');
+  const tApplyBtn = document.getElementById('topApplyFilter');
+  const tExportBtn = document.getElementById('topExportBtn');
+  tTimeFilter.addEventListener('change', () => handleFilterChange(tTimeFilter, tStartDate, tEndDate));
+  tApplyBtn.addEventListener('click', () => {
+    const filterType = tTimeFilter.value;
+    let start = tStartDate.value ? parseDate(tStartDate.value) : null;
+    let end = tEndDate.value ? parseDate(tEndDate.value) : null;
+    updateTopPerformer(filterType, start, end);
+  });
+  tExportBtn.addEventListener('click', () => {
+    const tbody = document.querySelector('#topPerformersTable tbody');
+    const rows = [...tbody.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.innerText));
+    exportCSV(['Rank','Operator','Produced','Wasted','Performance %','Reason'], rows, 'top_performers.csv');
+  });
+  // Initial load
+  updateOperatorPerformance('daily');
+  updateMachineEfficiency('daily');
+  updateOrdersOverview('daily');
+  updateTopPerformer('daily');
+});
+</script>
+</body>
+</html>

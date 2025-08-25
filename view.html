@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RFID Tracker - View</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .green {
+  background-color: #00C853; /* Bright green */
+}
+
+.red {
+  background-color: #D32F2F; /* Strong red */
+}
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1C1B2F;
+      color: white;
+    }
+    header {
+      background-color: #2A2940;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    nav a {
+      margin-left: 1rem;
+      color: white;
+      text-decoration: none;
+    }
+    nav a.active {
+      font-weight: bold;
+      color: #F4B400;
+    }
+    .container {
+      padding: 2rem;
+    }
+    .cards {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      flex: 1;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .blue {
+      background-color: #4A90E2;
+    }
+    .purple {
+      background-color: #7B61FF;
+    }
+    canvas {
+      background-color: #2A2940;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+    .progress-bar {
+      background-color: #333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+    }
+    .bar {
+      height: 16px;
+    }
+    .progress table {
+      width: 100%;
+      margin-top: 1rem;
+      background-color: #2A2940;
+      border-radius: 8px;
+    }
+    .progress table th,
+    .progress table td {
+      padding: 0.5rem;
+      border-bottom: 1px solid #444;
+    }
+    .section-box {
+      background-color: #2A2940;
+      border: 1px solid #444;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-bottom: 2rem;
+    }
+    .section-box h2 {
+      border-bottom: 1px solid #555;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: 1rem;
+      background-color: #1C1B2F;
+      border-radius: 6px;
+      padding: 1rem;
+    }
+    table th {
+      background-color: #333;
+    }
+    .section-box .cards {
+      margin-top: 1.5rem;
+    }
+    #brandProgressTable {
+      margin-bottom: 2rem;
+    }
+    #brandProgressBars div {
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+    }
+    #brandProgressBars .progress-bar {
+      margin-bottom: 1rem;
+    }
+
+    /* ➕ New style for RFID order cards layout */
+    .rfid-summary {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin-top: 2rem;
+      text-align: center;
+      flex-wrap: wrap;
+    }
+    .rfid-summary > div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 1rem;
+    }
+    .rfid-summary .card {
+      width: 150px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>RFID Tracker - View Data</h1>
+    <nav>
+      <a href="view.html" class="active">Home</a>
+      <a href="entry.html" class="active">Data Entry</a>
+      <a href="dataview.html" class="active">Data View</a>
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="adminPanel.html" class="active">Admin Panel</a>
+    </nav>
+  </header>
+
+  <main class="container">
+
+    <!-- ✅ 1. Machine-wise Production Summary -->
+    <section class="section-box">
+      <h2>📊 Machine-wise Production Summary</h2>
+      <label for="prodDate">Select Date:</label>
+      <input type="date" id="prodDate" onchange="renderProductionTable()" />
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Machine</th>
+              <th>Brand</th>
+              <th>Product Type</th>
+              <th>Item</th>
+              <th>Produced</th>
+              <th>Wastage</th>
+              <th>Waste %</th>
+              <th>Operators</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="productionData"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ✅ 2. Recent RFID Order Entries -->
+   <!-- ✅ 2. Recent RFID Order Entries -->
+<section class="section-box">
+  <h2>📦 Recent RFID Order Entries</h2>
+
+  <label for="historyDate">Select Date:</label>
+  <input type="date" id="historyDate" onchange="loadHistoricalData()" />
+
+  <div class="rfid-summary">
+    <!-- 🔹 Total Orders Received -->
+    <div>
+      <div style="font-weight: bold; margin-bottom: 0.5rem;">Total Orders Received</div>
+      <div class="card blue" id="receivedCard">0<br />Received</div>
+    </div>
+
+    <!-- 🔹 Total Produced Qty -->
+    <div>
+      <div style="font-weight: bold; margin-bottom: 0.5rem;">Total Produced Qty</div>
+      <div class="card green" id="producedQtyCard">0<br />Produced</div>
+    </div>
+
+    <!-- 🔹 Total Wasted Qty -->
+    <div>
+      <div style="font-weight: bold; margin-bottom: 0.5rem;">Total Wasted</div>
+      <div class="card red" id="wastedQtyCard">0<br />Wasted</div>
+    </div>
+
+    <!-- 🔹 Total Orders Dispatched -->
+    <div>
+      <div style="font-weight: bold; margin-bottom: 0.5rem;">Total Orders Dispatched</div>
+      <div class="card purple" id="dispatchedCard">0<br />Dispatched</div>
+    </div>
+  </div>
+</section>
+
+
+    <!-- ✅ 3. Production Progress Chart -->
+    <section class="section-box">
+      <h2>📈 Production Progress (Last 30 Days)</h2>
+      <canvas id="productionChart" width="600" height="300"></canvas>
+    </section>
+
+    <!-- ✅ 4. Brand-wise Progress -->
+    <section class="section-box" id="progressSection">
+      <h2>🏷️ Brand-wise Progress</h2>
+      <div id="brandProgressTable" class="table-wrapper"></div>
+      <div id="brandProgressBars"></div>
+    </section>
+
+  </main>
+
+  <script>
+    // ========== Dummy machine production data ==========
+    const machines = ["PL-800", "PL-608", "PL-901"];
+
+    const dailyProductionData = {
+      "2025-08-21": [
+        {
+          machine: "PL-800",
+          brand: "BrandX",
+          productType: "Tag",
+          item: "PDN60X30WASH",
+          produced: 15000,
+          wastage: 100,
+          operators: "Manjunath, Christy",
+          remarks: "Belt replaced"
+        },
+        {
+          machine: "PL-608",
+          brand: "BrandY",
+          productType: "Sticker",
+          item: "MAX",
+          produced: 30000,
+          wastage: 50,
+          operators: "Pavan",
+          remarks: ""
+        }
+      ]
+    };
+
+    function renderProductionTable() {
+      const date = document.getElementById('prodDate').value || new Date().toISOString().split('T')[0];
+      const tbody = document.getElementById('productionData');
+      tbody.innerHTML = '';
+
+      const entries = dailyProductionData[date] || [];
+
+      machines.forEach(machine => {
+        const data = entries.find(e => e.machine === machine);
+        const row = document.createElement('tr');
+        if (data) {
+          const wastePercent = ((data.wastage / data.produced) * 100).toFixed(2) + '%';
+          row.innerHTML = `
+            <td>${data.machine}</td>
+            <td>${data.brand}</td>
+            <td>${data.productType}</td>
+            <td>${data.item}</td>
+            <td>${data.produced}</td>
+            <td>${data.wastage}</td>
+            <td>${wastePercent}</td>
+            <td>${data.operators}</td>
+            <td>${data.remarks}</td>
+          `;
+        } else {
+          row.innerHTML = `<td>${machine}</td><td colspan="8">No data available</td>`;
+        }
+        tbody.appendChild(row);
+      });
+    }
+
+    renderProductionTable(); // on load
+
+    // ========== Chart ==========
+    const days = [...Array(30).keys()].map(i => {
+      const d = new Date();
+      d.setDate(d.getDate() - (29 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    const receivedData = days.map(() => Math.floor(Math.random() * 40) + 80);
+    const dispatchedData = days.map(() => Math.floor(Math.random() * 30) + 20);
+
+    new Chart(document.getElementById('productionChart'), {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [
+          {
+            label: 'Received Orders',
+            data: receivedData,
+            borderColor: '#4A90E2',
+            backgroundColor: 'rgba(74,144,226,0.2)',
+            fill: true
+          },
+          {
+            label: 'Dispatched Orders',
+            data: dispatchedData,
+            borderColor: '#F4B400',
+            backgroundColor: 'rgba(244,180,0,0.2)',
+            fill: true
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          title: { display: true, text: 'Last 30 Days – Orders', color: '#fff' },
+          legend: { labels: { color: '#fff' } }
+        },
+        scales: {
+          x: { ticks: { color: '#fff' } },
+          y: { beginAtZero: true, ticks: { color: '#fff' } }
+        }
+      }
+    });
+
+    // ========== Brand Progress ==========
+    const brandWiseData = [
+      { brand: 'BrandX', tags: 120, stickers: 80 },
+      { brand: 'BrandY', tags: 150, stickers: 130 },
+      { brand: 'BrandZ', tags: 90, stickers: 60 }
+    ];
+
+    const progressTableContainer = document.getElementById('brandProgressTable');
+    const progressBarsContainer = document.getElementById('brandProgressBars');
+
+    const brandTable = document.createElement('table');
+    brandTable.innerHTML = `
+      <thead>
+        <tr><th>Brand</th><th>Tags</th><th>Stickers</th><th>Total</th></tr>
+      </thead>
+      <tbody>
+        ${brandWiseData.map(b => `
+          <tr>
+            <td>${b.brand}</td>
+            <td>${b.tags}</td>
+            <td>${b.stickers}</td>
+            <td>${b.tags + b.stickers}</td>
+          </tr>`).join('')}
+      </tbody>
+    `;
+    progressTableContainer.appendChild(brandTable);
+
+    const totalQty = brandWiseData.reduce((sum, b) => sum + b.tags + b.stickers, 0);
+    const colors = ['#50E3C2', '#9013FE', '#F5A623'];
+
+    brandWiseData.forEach((b, i) => {
+      const percent = (((b.tags + b.stickers) / totalQty) * 100).toFixed(1);
+      const label = document.createElement('div');
+      label.textContent = `${b.brand} – ${percent}%`;
+      const barWrapper = document.createElement('div');
+      barWrapper.className = 'progress-bar';
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.width = `${percent}%`;
+      bar.style.backgroundColor = colors[i % colors.length];
+      barWrapper.appendChild(bar);
+
+      progressBarsContainer.appendChild(label);
+      progressBarsContainer.appendChild(barWrapper);
+    });
+
+    // ========== RFID Random Data Load ==========
+    function loadHistoricalData() {
+      document.getElementById("receivedCard").innerHTML = `${Math.floor(Math.random() * 50 + 100)}<br/>Received`;
+      document.getElementById("dispatchedCard").innerHTML = `${Math.floor(Math.random() * 40 + 60)}<br/>Dispatched`;
+    }
+  </script>
+</body>
+</html>

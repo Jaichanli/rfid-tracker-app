@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RFID Tracker - View</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1C1B2F;
+      color: white;
+    }
+    header {
+      background-color: #2A2940;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    nav a {
+      margin-left: 1rem;
+      color: white;
+      text-decoration: none;
+    }
+    nav a.active {
+      font-weight: bold;
+      color: #F4B400;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- header.html -->
+<header>
+  <h1>RFID Tracker</h1>
+  <nav>
+    <a href="view.html">Home</a>
+    <a href="entry.html">Data Entry</a>
+    <a href="dataview.html">Data View</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="adminPanel.html">Admin Panel</a>
+  </nav>
+</header>
+<div id="header-container"></div>
+
+<script>
+  fetch('header.html')
+    .then(response => response.text())
+    .then(data => {
+      document.getElementById('header-container').innerHTML = data;
+
+      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+      const navLinks = document.querySelectorAll('#header-container nav a');
+
+      navLinks.forEach(link => {
+        if (link.getAttribute('href') === currentPage) {
+          link.classList.add('active');
+        }
+      });
+    });
+</script>
+

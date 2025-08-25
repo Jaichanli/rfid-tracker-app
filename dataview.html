@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Production Data View</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
+  <style>
+    body {
+      background-color: #1C1B2F;
+      color: #ECECEC;
+    }
+    .form-select, .form-control {
+      background-color: #3A3948 !important;
+      color: #fff !important;
+      border: none;
+    }
+    .form-select:focus, .form-control:focus {
+      box-shadow: 0 0 0 0.2rem rgba(108, 99, 255, 0.25);
+    }
+    th, td {
+      vertical-align: middle;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Production Data View</h2>
+      <button class="btn btn-success" onclick="exportCSV()">Export CSV</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-2">
+        <input type="text" id="filterOrderNo" class="form-control" placeholder="Order No" />
+      </div>
+
+      <div class="col-md-2">
+        <input type="date" id="filterDate" class="form-control" />
+      </div>
+
+      <div class="col-md-2">
+        <select id="filterShift" class="form-select">
+          <option value="">All Shifts</option>
+          <option value="1st Shift">1st Shift</option>
+          <option value="2nd Shift">2nd Shift</option>
+          <option value="3rd Shift">3rd Shift</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <input type="text" id="filterItem" class="form-control" placeholder="Item" />
+      </div>
+
+      <div class="col-md-2">
+        <select id="filterBrand" class="form-select">
+          <option value="">All Brands</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <input type="text" id="filterProductType" class="form-control" placeholder="Product Type" />
+      </div>
+
+      <div class="col-md-2">
+        <select id="filterOperator" class="form-select">
+          <option value="">All Operators</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <input type="text" id="filterMachine" class="form-control" placeholder="Machine" />
+      </div>
+
+      <div class="col-md-2">
+        <select id="filterStatus" class="form-select">
+          <option value="">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+          <option value="Completed">Completed</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 d-flex align-items-center">
+        <button class="btn btn-primary w-100" id="btnSearch">Search</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrapper">
+      <table class="table table-bordered table-sm text-light">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Order No</th>
+            <th>Date</th>
+            <th>Shift</th>
+            <th>Item</th>
+            <th>Brand</th>
+            <th>Product Type</th>
+            <th>Produced</th>
+            <th>Wasted</th>
+            <th>Waste %</th>
+            <th>Operator</th>
+            <th>Machine</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="dataTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let allData = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const stored = localStorage.getItem('productionEntries');
+      if (stored) {
+        try {
+          allData = JSON.parse(stored);
+        } catch (e) {
+          console.error('Invalid JSON data in localStorage');
+          allData = [];
+        }
+      }
+
+      populateFilters();
+      setDefaultDate();
+      renderTable(filterData());
+
+      document.getElementById('btnSearch').addEventListener('click', () => {
+        renderTable(filterData());
+      });
+    });
+
+    function populateFilters() {
+      const operators = new Set(), brands = new Set();
+      allData.forEach(e => {
+        if (e.operators) operators.add(e.operators);
+        if (e.brand) brands.add(e.brand);
+      });
+
+      const opSel = document.getElementById('filterOperator');
+      const brSel = document.getElementById('filterBrand');
+      opSel.length = 1; brSel.length = 1;
+
+      [...operators].forEach(op => opSel.appendChild(new Option(op, op)));
+      [...brands].forEach(br => brSel.appendChild(new Option(br, br)));
+    }
+
+    function setDefaultDate() {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('filterDate').value = today;
+    }
+
+    function filterData() {
+      const f = {
+        orderNo: document.getElementById('filterOrderNo').value.trim().toLowerCase(),
+        date: document.getElementById('filterDate').value,
+        shift: document.getElementById('filterShift').value.toLowerCase(),
+        item: document.getElementById('filterItem').value.trim().toLowerCase(),
+        brand: document.getElementById('filterBrand').value.toLowerCase(),
+        productType: document.getElementById('filterProductType').value.trim().toLowerCase(),
+        operator: document.getElementById('filterOperator').value.toLowerCase(),
+        machine: document.getElementById('filterMachine').value.trim().toLowerCase(),
+        status: document.getElementById('filterStatus').value.toLowerCase()
+      };
+
+      return allData.filter(e => {
+        return (!f.orderNo || (e.orderNo || '').toLowerCase().includes(f.orderNo)) &&
+               (!f.date || e.date === f.date) &&
+               (!f.shift || (e.shift || '').toLowerCase() === f.shift) &&
+               (!f.item || (e.item || '').toLowerCase().includes(f.item)) &&
+               (!f.brand || (e.brand || '').toLowerCase() === f.brand) &&
+               (!f.productType || (e.productType || '').toLowerCase().includes(f.productType)) &&
+               (!f.operator || (e.operators || '').toLowerCase() === f.operator) &&
+               (!f.machine || (e.machine || '').toLowerCase() === f.machine) &&
+               (!f.status || (e.status || '').toLowerCase() === f.status);
+      });
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('dataTableBody');
+      tbody.innerHTML = '';
+      data.forEach((e, i) => {
+        const wastePercent = e.produced ? ((e.wastage / e.produced) * 100).toFixed(2) + '%' : '0%';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${e.orderNo || '-'}</td>
+          <td>${e.date || '-'}</td>
+          <td>${e.shift || '-'}</td>
+          <td>${e.item || '-'}</td>
+          <td>${e.brand || '-'}</td>
+          <td>${e.productType || '-'}</td>
+          <td>${e.produced ?? 0}</td>
+          <td>${e.wastage ?? 0}</td>
+          <td>${wastePercent}</td>
+          <td>${e.operators || '-'}</td>
+          <td>${e.machine || '-'}</td>
+          <td>${e.status || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+   function exportCSV() {
+  if (!allData.length) return alert('No data to export.');
+
+  const header = ['Order No','Date','Shift','Item','Brand','Product Type','Produced','Wasted','Waste %','Operator','Machine','Status'];
+
+  const rows = allData.map(e => [
+    e.orderNo,
+    e.date,
+    e.shift,
+    e.item,
+    e.brand,
+    e.productType,
+    e.produced,
+    e.wastage,
+    e.produced ? ((e.wastage / e.produced) * 100).toFixed(2) + '%' : '0%',
+    e.operators,
+    e.machine,
+    e.status
+  ]);
+
+  const csv = [header, ...rows]
+    .map(row => row.map(cell => `"${cell}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'production_data.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+

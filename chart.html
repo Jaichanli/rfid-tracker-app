@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Charts</title>
+  <link rel="stylesheet" href="admin.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+
+    <!-- User Role Chart -->
+    <h2 class="text-center mb-4">🧑‍💼 User Role Distribution</h2>
+    <div class="form-check form-switch text-center mb-3">
+      <input class="form-check-input" type="checkbox" id="chartToggle">
+      <label class="form-check-label" for="chartToggle">Toggle Pie/Bar View</label>
+    </div>
+    <canvas id="roleChart" height="100"></canvas>
+    <div class="text-center">
+      <button class="btn btn-outline-success mt-3" onclick="exportRoleCSV()">Export Role Data (CSV)</button>
+      <button class="btn btn-outline-primary mt-2" onclick="exportChart('roleChart')">Download Role Chart</button>
+    </div>
+
+    <!-- Login Activity Chart -->
+    <h2 class="text-center mt-5">🔐 Login Activity</h2>
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <input type="date" id="startDate" class="form-control" placeholder="Start Date">
+      </div>
+      <div class="col-md-4">
+        <input type="date" id="endDate" class="form-control" placeholder="End Date">
+      </div>
+      <div class="col-md-4">
+        <input type="text" id="usernameFilter" class="form-control" placeholder="Search by Username">
+      </div>
+    </div>
+    <canvas id="loginChart" height="100"></canvas>
+    <div class="text-center">
+      <button class="btn btn-outline-success mt-3" onclick="exportLoginCSV()">Export Login Data (CSV)</button>
+      <button class="btn btn-outline-primary mt-2" onclick="exportChart('loginChart')">Download Login Chart</button>
+    </div>
+
+  </div>
+
+  <!-- Chart Logic -->
+  <script>
+    let roleChart;
+
+    async function loadUserRolesChart(type = 'pie') {
+      const res = await fetch('/api/user-roles');
+      const data = await res.json();
+
+      const labels = data.map(r => r.role);
+      const counts = data.map(r => r.count);
+
+      const ctx = document.getElementById('roleChart').getContext('2d');
+      if (roleChart) roleChart.destroy();
+
+      roleChart = new Chart(ctx, {
+        type: type,
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'User Roles',
+            data: counts,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.6)',
+              'rgba(54, 162, 235, 0.6)',
+              'rgba(255, 206, 86, 0.6)'
+            ],
+            borderColor: '#fff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'User Role Distribution',
+              font: { size: 18 }
+            },
+            legend: { position: 'bottom' }
+          },
+          scales: type === 'bar' ? {
+            y: { beginAtZero: true }
+          } : {}
+        }
+      });
+    }
+
+    document.getElementById('chartToggle').addEventListener('change', (e) => {
+      const chartType = e.target.checked ? 'bar' : 'pie';
+      loadUserRolesChart(chartType);
+    });
+
+    loadUserRolesChart();
+
+    let loginChart;
+
+    async function loadLoginActivityChart() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const username = document.getElementById('usernameFilter').value.trim();
+
+      let url = '/api/login-activity';
+      const params = [];
+      if (start) params.push(`start=${start}`);
+      if (end) params.push(`end=${end}`);
+      if (username) params.push(`user=${encodeURIComponent(username)}`);
+      if (params.length) url += `?${params.join('&')}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      const labels = data.map(d => d.date);
+      const counts = data.map(d => d.count);
+
+      const ctx = document.getElementById('loginChart').getContext('2d');
+      if (loginChart) loginChart.destroy();
+
+      loginChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Logins per Day',
+            data: counts,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Filtered Login Activity',
+              font: { size: 18 }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    // Auto-refresh login chart every 60 seconds
+    setInterval(() => {
+      loadLoginActivityChart();
+    }, 60000);
+
+    // Trigger chart reload on filter change
+    document.getElementById('startDate').addEventListener('change', loadLoginActivityChart);
+    document.getElementById('endDate').addEventListener('change', loadLoginActivityChart);
+    document.getElementById('usernameFilter').addEventListener('input', () => {
+      setTimeout(loadLoginActivityChart, 500); // debounce
+    });
+
+    loadLoginActivityChart();
+
+    function downloadCSV(filename, rows) {
+      if (!rows.length) return;
+      const header = Object.keys(rows[0]).join(',');
+      const body = rows.map(row => Object.values(row).join(',')).join('\n');
+      const csv = `${header}\n${body}`;
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+    }
+
+    async function exportLoginCSV() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const username = document.getElementById('usernameFilter').value.trim();
+
+      let url = '/api/login-activity';
+      const params = [];
+      if (start) params.push(`start=${start}`);
+      if (end) params.push(`end=${end}`);
+      if (username) params.push(`user=${encodeURIComponent(username)}`);
+      if (params.length) url += `?${params.join('&')}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+      downloadCSV('login_activity.csv', data);
+    }
+
+    async function exportRoleCSV() {
+      const res = await fetch('/api/user-roles');
+      const data = await res.json();
+      downloadCSV('user_roles.csv', data);
+    }
+
+    function exportChart(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const link = document.createElement('a');
+      link.download = `${canvasId}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  </script>
+</body>
+</html>
